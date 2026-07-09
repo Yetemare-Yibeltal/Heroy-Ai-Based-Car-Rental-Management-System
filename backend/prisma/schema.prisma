@@ -56,6 +56,11 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum PaymentProvider {
+  STRIPE
+  CHAPA
+}
+
 enum PaymentStatus {
   PENDING
   PAID
@@ -68,6 +73,9 @@ enum PaymentMethod {
   CARD
   CASH
   BANK_TRANSFER
+  TELEBIRR
+  CBE_BIRR
+  HELLOCASH
 }
 
 enum VerificationStatus {
@@ -254,18 +262,21 @@ model Booking {
 // ---------------------------------------------
 
 model Payment {
-  id                     String        @id @default(cuid())
-  bookingId              String        @unique
-  booking                Booking       @relation(fields: [bookingId], references: [id])
+  id                     String          @id @default(cuid())
+  bookingId              String          @unique
+  booking                Booking         @relation(fields: [bookingId], references: [id])
   amount                 Float
-  currency               String        @default("usd")
-  method                 PaymentMethod @default(CARD)
-  status                 PaymentStatus @default(PENDING)
+  currency               String          @default("usd")
+  provider               PaymentProvider @default(STRIPE)
+  method                 PaymentMethod   @default(CARD)
+  status                 PaymentStatus   @default(PENDING)
   stripePaymentIntentId  String?
+  chapaTxRef             String?         @unique
   invoiceUrl             String?
-  createdAt              DateTime      @default(now())
+  createdAt              DateTime        @default(now())
 
   @@index([status])
+  @@index([provider])
 }
 
 // ---------------------------------------------
