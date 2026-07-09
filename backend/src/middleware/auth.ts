@@ -1,6 +1,13 @@
-import { Request, Response, NextFunction } from "express";
-import { verifyAccessToken, AccessTokenPayload } from "../utils/jwt";
-import { AppError } from "../utils/AppError";
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AccessTokenPayload;
+    }
+  }
+}
+import { Request, Response, NextFunction } from 'express';
+import { verifyAccessToken, AccessTokenPayload } from '../utils/jwt';
+import { AppError } from '../utils/AppError';
 
 declare global {
   namespace Express {
@@ -15,25 +22,21 @@ declare global {
  * and attaches the decoded payload to req.user. Throws 401 if
  * missing, malformed, or expired.
  */
-export function authenticate(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function authenticate(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    throw AppError.unauthorized("No access token provided.");
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw AppError.unauthorized('No access token provided.');
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = verifyAccessToken(token);
     req.user = decoded;
     next();
   } catch (err) {
-    throw AppError.unauthorized("Invalid or expired access token.");
+    throw AppError.unauthorized('Invalid or expired access token.');
   }
 }
 
@@ -46,13 +49,11 @@ export function authenticate(
 export function authorize(...allowedRoles: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      throw AppError.unauthorized("Authentication required.");
+      throw AppError.unauthorized('Authentication required.');
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      throw AppError.forbidden(
-        "You do not have permission to perform this action.",
-      );
+      throw AppError.forbidden('You do not have permission to perform this action.');
     }
 
     next();
@@ -65,18 +66,14 @@ export function authorize(...allowedRoles: string[]) {
  * logged-in users (e.g. showing wishlist state on vehicle listings)
  * without requiring login.
  */
-export function optionalAuthenticate(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function optionalAuthenticate(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next();
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.split(' ')[1];
 
   try {
     req.user = verifyAccessToken(token);

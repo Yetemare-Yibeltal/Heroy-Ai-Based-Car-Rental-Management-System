@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+npx lint-staged
+"lint-staged": {
+  "backend/src/**/*.ts": ["prettier --write", "eslint --fix"],
+  "frontend/**/*.{ts,tsx}": ["prettier --write", "eslint --fix"]
+}
