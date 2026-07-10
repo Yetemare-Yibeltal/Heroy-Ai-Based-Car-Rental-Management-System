@@ -4,6 +4,9 @@ import { usersRoutes } from '../modules/users/users.routes';
 import { vehiclesRoutes } from '../modules/vehicles/vehicles.routes';
 import { bookingsRoutes } from '../modules/bookings/bookings.routes';
 import { paymentsRoutes } from '../modules/payments/payments.routes';
+import { reviewsRoutes } from '../modules/reviews/reviews.routes';
+import { locationsRoutes } from '../modules/locations/locations.routes';
+import { notificationsRoutes } from '../modules/notifications/notifications.routes';
 
 export const routes = Router();
 
@@ -20,6 +23,9 @@ routes.use('/users', usersRoutes);
 routes.use('/vehicles', vehiclesRoutes);
 routes.use('/bookings', bookingsRoutes);
 routes.use('/payments', paymentsRoutes);
+routes.use('/reviews', reviewsRoutes);
+routes.use('/locations', locationsRoutes);
+routes.use('/notifications', notificationsRoutes);
 
 // Further module routes will be mounted here progressively, e.g.:
-// routes.use('/reviews', reviewsRoutes);
+// routes.use('/coupons', couponsRoutes);
