@@ -1,5 +1,6 @@
 import { Prisma, BookingStatus, VehicleStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
+import { awardPointsForBooking } from '../coupons/loyalty.service';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
 import { isVehicleAvailable, getConflictingBookings } from './availability.util';
@@ -209,12 +210,7 @@ export async function updateBookingStatus(
         where: { id: existing.vehicleId },
         data: { status: VehicleStatus.RENTED },
       });
-    } else if (newStatus === BookingStatus.COMPLETED || newStatus === BookingStatus.CANCELLED) {
-      await tx.vehicle.update({
-        where: { id: existing.vehicleId },
-        data: { status: VehicleStatus.AVAILABLE },
-      });
-    }
+   
 
     return updated;
   });

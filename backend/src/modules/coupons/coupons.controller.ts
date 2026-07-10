@@ -42,3 +42,16 @@ export async function deleteCoupon(req: Request, res: Response): Promise<void> {
   await couponsService.deleteCoupon(req.params.id);
   sendNoContent(res);
 }
+import * as loyaltyService from './loyalty.service';
+
+export async function getMyLoyaltyBalance(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized('Authentication required.');
+  const balance = await loyaltyService.getLoyaltyBalance(req.user.userId);
+  sendSuccess(res, 200, 'Loyalty balance fetched.', balance);
+}
+
+export async function redeemLoyaltyPoints(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized('Authentication required.');
+  const coupon = await loyaltyService.redeemPointsForCoupon(req.user.userId);
+  sendSuccess(res, 201, 'Points redeemed for a discount coupon.', coupon);
+}
