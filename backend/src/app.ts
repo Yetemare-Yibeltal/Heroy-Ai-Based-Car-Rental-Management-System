@@ -25,7 +25,8 @@ export function createApp(): Application {
   // Stripe webhooks need the raw request body to verify signatures,
   // so that route is registered with express.raw() before the global
   // express.json() parser below (wired in Phase 7).
-  app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
+  app.use('/api/payments/stripe/webhook', express.raw({ type: 'application/json' }));
+  app.use('/api/payments/chapa/webhook', express.raw({ type: 'application/json' }));
 
   // Body parsing for everything else
   app.use(express.json({ limit: "2mb" }));
