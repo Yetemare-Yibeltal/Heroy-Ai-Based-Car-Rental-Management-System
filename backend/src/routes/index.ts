@@ -8,6 +8,8 @@ import { reviewsRoutes } from '../modules/reviews/reviews.routes';
 import { locationsRoutes } from '../modules/locations/locations.routes';
 import { notificationsRoutes } from '../modules/notifications/notifications.routes';
 import { couponsRoutes } from '../modules/coupons/coupons.routes';
+import { wishlistRoutes } from '../modules/wishlist/wishlist.routes';
+import { aiRoutes } from '../modules/ai/ai.routes';
 
 export const routes = Router();
 
@@ -28,6 +30,8 @@ routes.use('/reviews', reviewsRoutes);
 routes.use('/locations', locationsRoutes);
 routes.use('/notifications', notificationsRoutes);
 routes.use('/coupons', couponsRoutes);
+routes.use('/wishlist', wishlistRoutes);
+routes.use('/ai', aiRoutes);
 
 // Further module routes will be mounted here progressively, e.g.:
-// routes.use('/wishlist', wishlistRoutes);
+// routes.use('/admin', adminRoutes);
