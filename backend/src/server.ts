@@ -4,6 +4,8 @@ import { env } from './config/env';
 import { logger } from './utils/logger';
 import { prisma, disconnectPrisma } from './config/prisma';
 import { initSentry, captureException } from './integrations/sentry';
+import { startReminderJob } from './jobs/reminderJob';
+import { startAutoCompleteJob } from './jobs/autoCompleteJob';
 
 async function bootstrap() {
   // Verify the database connection before accepting traffic.
@@ -23,6 +25,9 @@ async function bootstrap() {
   server.listen(env.port, () => {
     logger.info(`HEROY backend running in ${env.nodeEnv} mode on port ${env.port}`);
     logger.info(`Health check: http://localhost:${env.port}/api/health`);
+
+    startReminderJob();
+    startAutoCompleteJob();
   });
 
   async function shutdown(signal: string) {
