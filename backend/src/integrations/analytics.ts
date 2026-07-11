@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { logger } from '../utils/logger';
 
@@ -12,13 +13,6 @@ export type AnalyticsEventName =
   | 'review_submitted'
   | 'coupon_redeemed';
 
-/**
- * Records a business event for internal analytics. Never stores
- * personally identifiable information beyond an optional userId -
- * no IP addresses, device fingerprints, or third-party tracking.
- * Failures here are logged but never thrown, since analytics
- * should never break the actual user-facing action that triggered it.
- */
 export async function trackEvent(
   eventName: AnalyticsEventName,
   userId?: string,
@@ -26,7 +20,11 @@ export async function trackEvent(
 ): Promise<void> {
   try {
     await prisma.analyticsEvent.create({
-      data: { eventName, userId, metadata },
+      data: {
+        eventName,
+        userId,
+        metadata: metadata as Prisma.InputJsonValue | undefined,
+      },
     });
   } catch (err) {
     logger.error(`Failed to track analytics event: ${eventName}`, err as Error);
