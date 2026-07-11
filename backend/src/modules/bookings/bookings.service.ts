@@ -152,11 +152,6 @@ export async function getBookingById(bookingId: string): Promise<BookingOutput> 
   return toBookingOutput(booking);
 }
 
-/**
- * Ensures a booking belongs to the requesting user, or the requester
- * is staff/admin. Throws 403 otherwise. Used before allowing a
- * customer to view or cancel their own booking.
- */
 export async function assertBookingOwnership(
   bookingId: string,
   userId: string,
@@ -182,11 +177,6 @@ const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   [BookingStatus.CANCELLED]: [],
 };
 
-/**
- * Transitions a booking to a new status, keeping the vehicle's own
- * status in sync, awarding loyalty points on completion, and pushing
- * a live real-time update to the customer's connected devices.
- */
 export async function updateBookingStatus(
   bookingId: string,
   newStatus: BookingStatus
@@ -243,17 +233,14 @@ export async function updateBookingStatus(
   return toBookingOutput(booking);
 }
 
-/**
- * Customer-initiated cancellation. Only allowed while a booking is
- * still PENDING or CONFIRMED (not once the rental is ACTIVE).
- */
 export async function cancelBooking(bookingId: string): Promise<BookingOutput> {
   const existing = await prisma.booking.findUnique({ where: { id: bookingId } });
   if (!existing) {
     throw AppError.notFound('Booking not found.');
   }
 
-  if (![BookingStatus.PENDING, BookingStatus.CONFIRMED].includes(existing.status)) {
+  const cancellableStatuses: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.CONFIRMED];
+  if (!cancellableStatuses.includes(existing.status)) {
     throw AppError.badRequest(
       'This booking can no longer be cancelled. It may already be active or completed.'
     );
