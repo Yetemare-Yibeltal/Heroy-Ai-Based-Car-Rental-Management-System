@@ -460,3 +460,17 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
 }
+// ---------------------------------------------
+// Analytics events (self-hosted, privacy-respecting)
+// ---------------------------------------------
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  eventName  String
+  userId     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([eventName])
+  @@index([createdAt])
+}
