@@ -1,10 +1,11 @@
 import { Prisma, BookingStatus, VehicleStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
-import { awardPointsForBooking } from '../coupons/loyalty.service';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
 import { isVehicleAvailable, getConflictingBookings } from './availability.util';
 import { calculatePriceBreakdown } from './pricing.util';
+import { awardPointsForBooking } from '../coupons/loyalty.service';
+import { emitBookingStatusChanged } from '../../realtime/notifications.gateway';
 import {
   CreateBookingInput,
   BookingOutput,
@@ -181,11 +182,19 @@ const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   [BookingStatus.CANCELLED]: [],
 };
 
+/**
+ * Transitions a booking to a new status, keeping the vehicle's own
+ * status in sync, awarding loyalty points on completion, and pushing
+ * a live real-time update to the customer's connected devices.
+ */
 export async function updateBookingStatus(
   bookingId: string,
   newStatus: BookingStatus
 ): Promise<BookingOutput> {
-  const existing = await prisma.booking.findUnique({ where: { id: bookingId } });
+  const existing = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { vehicle: { select: { name: true } } },
+  });
   if (!existing) {
     throw AppError.notFound('Booking not found.');
   }
@@ -204,15 +213,29 @@ export async function updateBookingStatus(
       include: bookingInclude,
     });
 
-    // Keep the vehicle's own status in sync with active rentals.
     if (newStatus === BookingStatus.ACTIVE) {
       await tx.vehicle.update({
         where: { id: existing.vehicleId },
         data: { status: VehicleStatus.RENTED },
       });
-   
+    } else if (newStatus === BookingStatus.COMPLETED || newStatus === BookingStatus.CANCELLED) {
+      await tx.vehicle.update({
+        where: { id: existing.vehicleId },
+        data: { status: VehicleStatus.AVAILABLE },
+      });
+    }
 
     return updated;
+  });
+
+  if (newStatus === BookingStatus.COMPLETED) {
+    await awardPointsForBooking(existing.userId, existing.totalPrice);
+  }
+
+  emitBookingStatusChanged(existing.userId, {
+    bookingId: existing.id,
+    status: newStatus,
+    vehicleName: existing.vehicle.name,
   });
 
   logger.info(`Booking ${bookingId} status changed: ${existing.status} -> ${newStatus}`);
