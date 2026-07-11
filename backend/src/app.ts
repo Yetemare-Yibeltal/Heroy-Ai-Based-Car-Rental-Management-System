@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { httpLogStream } from './utils/logger';
 import { generalLimiter } from './middleware/rateLimiter';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { requestLogger } from './middleware/requestLogger';
 import { routes } from './routes';
 import { setupSwagger } from './docs/swagger';
 
@@ -32,6 +33,9 @@ export function createApp(): Application {
   // Body parsing for everything else
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true }));
+
+  // Request ID assignment and structured per-request logging
+  app.use(requestLogger);
 
   // HTTP request logging piped into Winston
   app.use(morgan(env.isDevelopment ? 'dev' : 'combined', { stream: httpLogStream }));
