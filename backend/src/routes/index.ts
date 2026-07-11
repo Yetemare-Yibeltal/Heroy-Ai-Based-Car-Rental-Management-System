@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { healthRoutes } from './health.routes';
 import { authRoutes } from '../modules/auth/auth.routes';
 import { usersRoutes } from '../modules/users/users.routes';
 import { vehiclesRoutes } from '../modules/vehicles/vehicles.routes';
@@ -14,13 +15,7 @@ import { adminRoutes } from '../modules/admin/admin.routes';
 
 export const routes = Router();
 
-routes.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'HEROY API is running.',
-    timestamp: new Date().toISOString(),
-  });
-});
+routes.use('/health', healthRoutes);
 
 routes.use('/auth', authRoutes);
 routes.use('/users', usersRoutes);
