@@ -1,21 +1,6 @@
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AccessTokenPayload;
-    }
-  }
-}
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken, AccessTokenPayload } from '../utils/jwt';
+import { verifyAccessToken } from '../utils/jwt';
 import { AppError } from '../utils/AppError';
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AccessTokenPayload;
-    }
-  }
-}
 
 /**
  * Verifies the Authorization header contains a valid access token
@@ -63,7 +48,8 @@ export function authorize(...allowedRoles: string[]) {
 /**
  * Like authenticate, but does not throw if no token is present.
  * Used on public routes that behave slightly differently for
- * logged-in users (e.g. showing wishlist state on vehicle listings)
+ * logged-in users (e.g. showing wishlist state on vehicle listings,
+ * or letting the AI assistant recognize a logged-in customer)
  * without requiring login.
  */
 export function optionalAuthenticate(req: Request, res: Response, next: NextFunction): void {

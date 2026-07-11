@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { sendSuccess, sendPaginated, sendNoContent } from '../../utils/apiResponse';
+import { AppError } from '../../utils/AppError';
 import * as couponsService from './coupons.service';
+import * as loyaltyService from './loyalty.service';
 import { CreateCouponSchema, UpdateCouponSchema } from './coupons.validation';
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '../../constants/enums';
 
@@ -42,7 +44,6 @@ export async function deleteCoupon(req: Request, res: Response): Promise<void> {
   await couponsService.deleteCoupon(req.params.id);
   sendNoContent(res);
 }
-import * as loyaltyService from './loyalty.service';
 
 export async function getMyLoyaltyBalance(req: Request, res: Response): Promise<void> {
   if (!req.user) throw AppError.unauthorized('Authentication required.');

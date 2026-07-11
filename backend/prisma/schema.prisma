@@ -460,6 +460,7 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
 }
+
 // ---------------------------------------------
 // Analytics events (self-hosted, privacy-respecting)
 // ---------------------------------------------

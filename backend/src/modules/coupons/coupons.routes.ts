@@ -7,17 +7,20 @@ import { ADMIN_ROLES } from '../../constants/enums';
 import { createCouponSchema, updateCouponSchema } from './coupons.validation';
 
 export const couponsRoutes = Router();
+
+couponsRoutes.get('/check/:code', catchAsync(couponsController.checkCoupon));
+
 couponsRoutes.get(
   '/loyalty/balance',
   authenticate,
   catchAsync(couponsController.getMyLoyaltyBalance)
 );
+
 couponsRoutes.post(
   '/loyalty/redeem',
   authenticate,
   catchAsync(couponsController.redeemLoyaltyPoints)
 );
-couponsRoutes.get('/check/:code', catchAsync(couponsController.checkCoupon));
 
 couponsRoutes.get(
   '/',

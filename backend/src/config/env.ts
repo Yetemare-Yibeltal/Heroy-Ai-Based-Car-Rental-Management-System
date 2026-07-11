@@ -26,12 +26,6 @@ const envSchema = z.object({
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
   CHAPA_BASE_URL: z.string().default('https://api.chapa.co/v1'),
 
-  chapa: {
-    secretKey: raw.CHAPA_SECRET_KEY,
-    publicKey: raw.CHAPA_PUBLIC_KEY,
-    webhookSecret: raw.CHAPA_WEBHOOK_SECRET,
-    baseUrl: raw.CHAPA_BASE_URL,
-  },
   EMAIL_FROM: z.string().optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.string().optional(),
@@ -87,6 +81,13 @@ export const env = {
   stripe: {
     secretKey: raw.STRIPE_SECRET_KEY,
     webhookSecret: raw.STRIPE_WEBHOOK_SECRET,
+  },
+
+  chapa: {
+    secretKey: raw.CHAPA_SECRET_KEY,
+    publicKey: raw.CHAPA_PUBLIC_KEY,
+    webhookSecret: raw.CHAPA_WEBHOOK_SECRET,
+    baseUrl: raw.CHAPA_BASE_URL,
   },
 
   email: {
