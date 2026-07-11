@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { AIRole } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { logger } from '../../utils/logger';
@@ -84,7 +85,11 @@ export async function sendMessage(
 
     const toolResults = await Promise.all(
       toolUseBlocks.map(async (block) => {
-        const toolBlock = block as { id: string; name: string; input: Record<string, unknown> };
+        const toolBlock = block as unknown as {
+          id: string;
+          name: string;
+          input: Record<string, unknown>;
+        };
         const result = await executeAiTool(toolBlock.name, toolBlock.input, { userId });
         return {
           type: 'tool_result' as const,
