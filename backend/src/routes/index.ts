@@ -13,6 +13,7 @@ import { wishlistRoutes } from '../modules/wishlist/wishlist.routes';
 import { aiRoutes } from '../modules/ai/ai.routes';
 import { adminRoutes } from '../modules/admin/admin.routes';
 import { verificationRoutes } from '../modules/verification/verification.routes';
+import { inspectionRoutes } from '../modules/inspection/inspection.routes';
 
 export const routes = Router();
 
@@ -31,6 +32,7 @@ routes.use('/wishlist', wishlistRoutes);
 routes.use('/ai', aiRoutes);
 routes.use('/admin', adminRoutes);
 routes.use('/verification', verificationRoutes);
+routes.use('/inspections', inspectionRoutes);
 
 // Further module routes will be mounted here progressively, e.g.:
-// routes.use('/inspections', inspectionsRoutes);
+// routes.use('/maintenance', maintenanceRoutes);
