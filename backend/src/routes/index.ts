@@ -14,6 +14,7 @@ import { aiRoutes } from '../modules/ai/ai.routes';
 import { adminRoutes } from '../modules/admin/admin.routes';
 import { verificationRoutes } from '../modules/verification/verification.routes';
 import { inspectionRoutes } from '../modules/inspection/inspection.routes';
+import { maintenanceRoutes } from '../modules/maintenance/maintenance.routes';
 
 export const routes = Router();
 
@@ -33,6 +34,7 @@ routes.use('/ai', aiRoutes);
 routes.use('/admin', adminRoutes);
 routes.use('/verification', verificationRoutes);
 routes.use('/inspections', inspectionRoutes);
+routes.use('/maintenance', maintenanceRoutes);
 
 // Further module routes will be mounted here progressively, e.g.:
-// routes.use('/maintenance', maintenanceRoutes);
+// routes.use('/corporate', corporateRoutes);
