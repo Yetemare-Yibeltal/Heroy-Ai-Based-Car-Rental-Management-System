@@ -6,6 +6,7 @@ import { isVehicleAvailable, getConflictingBookings } from './availability.util'
 import { calculatePriceBreakdown } from './pricing.util';
 import { awardPointsForBooking } from '../coupons/loyalty.service';
 import { emitBookingStatusChanged } from '../../realtime/notifications.gateway';
+import { assertUserIsVerified } from '../verification/verification.service';
 import {
   CreateBookingInput,
   BookingOutput,
@@ -67,6 +68,8 @@ export async function createBooking(
   userId: string,
   input: CreateBookingInput
 ): Promise<BookingOutput> {
+  await assertUserIsVerified(userId);
+
   const vehicle = await prisma.vehicle.findUnique({ where: { id: input.vehicleId } });
   if (!vehicle) {
     throw AppError.notFound('Vehicle not found.');
