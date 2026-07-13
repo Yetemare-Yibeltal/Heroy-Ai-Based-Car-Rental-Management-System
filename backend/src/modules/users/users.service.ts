@@ -2,6 +2,8 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
+import { assertCanActOnRole } from '../../middleware/roles.middleware';
+import { recordAuditLog } from '../compliance/auditLog.service';
 import {
   PublicUser,
   UpdateProfileInput,
@@ -120,13 +122,27 @@ export async function getUserById(userId: string): Promise<PublicUser> {
   return toPublicUser(user);
 }
 
+/**
+ * Updates a user as an admin action. Enforces the real role
+ * hierarchy - an actor cannot modify someone of equal or higher
+ * rank, and cannot assign a role beyond their own rank. Any actual
+ * role change is recorded to the audit trail.
+ */
 export async function adminUpdateUser(
   userId: string,
-  input: AdminUpdateUserInput
+  input: AdminUpdateUserInput,
+  actingUserId: string,
+  actingUserRole: string
 ): Promise<PublicUser> {
   const existing = await prisma.user.findUnique({ where: { id: userId } });
   if (!existing) {
     throw AppError.notFound('User not found.');
+  }
+
+  assertCanActOnRole(actingUserRole as never, existing.role as never);
+
+  if (input.role && input.role !== existing.role) {
+    assertCanActOnRole(actingUserRole as never, input.role as never);
   }
 
   const user = await prisma.user.update({
@@ -140,18 +156,37 @@ export async function adminUpdateUser(
     },
   });
 
+  if (input.role && input.role !== existing.role) {
+    await recordAuditLog({
+      userId: actingUserId,
+      action: 'USER_ROLE_CHANGED',
+      entityType: 'User',
+      entityId: userId,
+      metadata: { from: existing.role, to: input.role },
+    });
+  }
+
   logger.info(`Admin updated user: ${user.email}`);
 
   return toPublicUser(user);
 }
 
-export async function adminDeleteUser(userId: string): Promise<void> {
+export async function adminDeleteUser(userId: string, actingUserRole: string): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     throw AppError.notFound('User not found.');
   }
 
+  assertCanActOnRole(actingUserRole as never, user.role as never);
+
   await prisma.user.delete({ where: { id: userId } });
+
+  await recordAuditLog({
+    action: 'USER_DELETED',
+    entityType: 'User',
+    entityId: userId,
+    metadata: { email: user.email, role: user.role },
+  });
 
   logger.info(`Admin deleted user: ${user.email}`);
 }
