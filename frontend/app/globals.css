@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base surfaces - deep asphalt navy, dark glass aesthetic */
+    --background: 222 24% 8%;
+    --foreground: 40 20% 92%;
+
+    --card: 222 20% 11%;
+    --card-foreground: 40 20% 92%;
+
+    --popover: 222 20% 11%;
+    --popover-foreground: 40 20% 92%;
+
+    /* Primary - signal amber, used for CTAs and highlights */
+    --primary: 38 88% 61%;
+    --primary-foreground: 30 40% 8%;
+
+    /* Secondary - steel blue-grey, supporting UI elements */
+    --secondary: 222 16% 18%;
+    --secondary-foreground: 40 20% 92%;
+
+    --muted: 222 16% 16%;
+    --muted-foreground: 220 10% 65%;
+
+    --accent: 222 16% 20%;
+    --accent-foreground: 40 20% 92%;
+
+    --destructive: 8 62% 47%;
+    --destructive-foreground: 40 20% 96%;
+
+    --success: 152 45% 42%;
+    --success-foreground: 152 40% 95%;
+
+    --border: 222 16% 20%;
+    --input: 222 16% 20%;
+    --ring: 38 88% 61%;
+
+    /* Gradient stops used by GradientText and hero backgrounds */
+    --gradient-from: 38 88% 61%;
+    --gradient-via: 14 82% 58%;
+    --gradient-to: 271 60% 62%;
+
+    --radius: 0.625rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ---------------------------------------------
+   Glassmorphism primitive
+   --------------------------------------------- */
+.glass-panel {
+  background: hsl(var(--card) / 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+.glass-panel-strong {
+  background: hsl(var(--card) / 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid hsl(var(--border) / 0.6);
+}
+
+/* ---------------------------------------------
+   Gradient text utility (paired with GradientText.tsx)
+   --------------------------------------------- */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--gradient-from)),
+    hsl(var(--gradient-via)),
+    hsl(var(--gradient-to))
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------------------------------------------
+   Scrollbar styling
+   --------------------------------------------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* ---------------------------------------------
+   Selection styling
+   --------------------------------------------- */
+::selection {
+  background: hsl(var(--primary) / 0.35);
+  color: hsl(var(--foreground));
+}
+
+/* ---------------------------------------------
+   Reduced motion accessibility (Phase 33 groundwork)
+   --------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
