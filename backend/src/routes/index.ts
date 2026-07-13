@@ -15,6 +15,8 @@ import { adminRoutes } from '../modules/admin/admin.routes';
 import { verificationRoutes } from '../modules/verification/verification.routes';
 import { inspectionRoutes } from '../modules/inspection/inspection.routes';
 import { maintenanceRoutes } from '../modules/maintenance/maintenance.routes';
+import { corporateRoutes } from '../modules/corporate/corporate.routes';
+import { subscriptionRoutes } from '../modules/corporate/subscription.routes';
 
 export const routes = Router();
 
@@ -35,6 +37,8 @@ routes.use('/admin', adminRoutes);
 routes.use('/verification', verificationRoutes);
 routes.use('/inspections', inspectionRoutes);
 routes.use('/maintenance', maintenanceRoutes);
+routes.use('/corporate', corporateRoutes);
+routes.use('/subscriptions', subscriptionRoutes);
 
 // Further module routes will be mounted here progressively, e.g.:
-// routes.use('/corporate', corporateRoutes);
+// routes.use('/compliance', complianceRoutes);
