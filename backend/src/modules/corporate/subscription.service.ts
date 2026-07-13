@@ -1,235 +1,234 @@
+import { Prisma, SubscriptionPlan, SubscriptionStatus, VehicleStatus } from '@prisma/client';
 import { prisma } from '../../config/prisma';
 import { AppError } from '../../utils/AppError';
 import { logger } from '../../utils/logger';
-import {
-  CreateCorporateAccountInput,
-  UpdateCorporateAccountInput,
-  CorporateAccountOutput,
-  CorporateEmployeeOutput,
-  CorporateBillingSummary,
-} from './corporate.types';
+import { CreateSubscriptionInput, SubscriptionOutput } from './subscription.types';
 
-function toAccountOutput(account: {
+/** Discount applied to the daily rate for committing to a longer period. */
+const WEEKLY_DISCOUNT = 0.15;
+const MONTHLY_DISCOUNT = 0.3;
+
+function calculatePricePerPeriod(dailyRate: number, plan: SubscriptionPlan): number {
+  if (plan === SubscriptionPlan.WEEKLY) {
+    return Math.round(dailyRate * 7 * (1 - WEEKLY_DISCOUNT) * 100) / 100;
+  }
+  return Math.round(dailyRate * 30 * (1 - MONTHLY_DISCOUNT) * 100) / 100;
+}
+
+function calculateNextBillingDate(startDate: Date, plan: SubscriptionPlan): Date {
+  const next = new Date(startDate);
+  if (plan === SubscriptionPlan.WEEKLY) {
+    next.setDate(next.getDate() + 7);
+  } else {
+    next.setMonth(next.getMonth() + 1);
+  }
+  return next;
+}
+
+function toOutput(sub: {
   id: string;
-  companyName: string;
-  contactEmail: string;
-  contactPhone: string | null;
-  billingAddress: string | null;
+  userId: string;
+  vehicleId: string;
+  vehicle: { name: string; plate: string };
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  pricePerPeriod: number;
+  startDate: Date;
+  nextBillingDate: Date;
   createdAt: Date;
-  _count: { employees: number };
-}): CorporateAccountOutput {
+}): SubscriptionOutput {
   return {
-    id: account.id,
-    companyName: account.companyName,
-    contactEmail: account.contactEmail,
-    contactPhone: account.contactPhone,
-    billingAddress: account.billingAddress,
-    employeeCount: account._count.employees,
-    createdAt: account.createdAt,
+    id: sub.id,
+    userId: sub.userId,
+    vehicleId: sub.vehicleId,
+    vehicleName: sub.vehicle.name,
+    vehiclePlate: sub.vehicle.plate,
+    plan: sub.plan,
+    status: sub.status,
+    pricePerPeriod: sub.pricePerPeriod,
+    startDate: sub.startDate,
+    nextBillingDate: sub.nextBillingDate,
+    createdAt: sub.createdAt,
   };
 }
 
-export async function createCorporateAccount(
-  input: CreateCorporateAccountInput
-): Promise<CorporateAccountOutput> {
-  const account = await prisma.corporateAccount.create({
-    data: {
-      companyName: input.companyName,
-      contactEmail: input.contactEmail,
-      contactPhone: input.contactPhone,
-      billingAddress: input.billingAddress,
-    },
-    include: { _count: { select: { employees: true } } },
-  });
+const subscriptionInclude = {
+  vehicle: { select: { name: true, plate: true } },
+} as const;
 
-  logger.info(`Corporate account created: ${account.companyName}`);
-
-  return toAccountOutput(account);
-}
-
-export async function updateCorporateAccount(
-  accountId: string,
-  input: UpdateCorporateAccountInput
-): Promise<CorporateAccountOutput> {
-  const existing = await prisma.corporateAccount.findUnique({ where: { id: accountId } });
-  if (!existing) {
-    throw AppError.notFound('Corporate account not found.');
+export async function createSubscription(
+  userId: string,
+  input: CreateSubscriptionInput
+): Promise<SubscriptionOutput> {
+  const vehicle = await prisma.vehicle.findUnique({ where: { id: input.vehicleId } });
+  if (!vehicle) {
+    throw AppError.notFound('Vehicle not found.');
   }
 
-  const account = await prisma.corporateAccount.update({
-    where: { id: accountId },
-    data: {
-      companyName: input.companyName,
-      contactEmail: input.contactEmail,
-      contactPhone: input.contactPhone,
-      billingAddress: input.billingAddress,
-    },
-    include: { _count: { select: { employees: true } } },
-  });
-
-  logger.info(`Corporate account updated: ${account.companyName}`);
-
-  return toAccountOutput(account);
-}
-
-export async function getCorporateAccountById(accountId: string): Promise<CorporateAccountOutput> {
-  const account = await prisma.corporateAccount.findUnique({
-    where: { id: accountId },
-    include: { _count: { select: { employees: true } } },
-  });
-
-  if (!account) {
-    throw AppError.notFound('Corporate account not found.');
+  if (vehicle.status !== VehicleStatus.AVAILABLE) {
+    throw AppError.badRequest('This vehicle is not currently available for a subscription plan.');
   }
 
-  return toAccountOutput(account);
+  const existingActive = await prisma.subscription.findFirst({
+    where: { vehicleId: input.vehicleId, status: SubscriptionStatus.ACTIVE },
+  });
+  if (existingActive) {
+    throw AppError.conflict('This vehicle already has an active subscription.');
+  }
+
+  const startDate = new Date(input.startDate);
+  const pricePerPeriod = calculatePricePerPeriod(vehicle.pricePerDay, input.plan);
+  const nextBillingDate = calculateNextBillingDate(startDate, input.plan);
+
+  const subscription = await prisma.$transaction(async (tx) => {
+    const created = await tx.subscription.create({
+      data: {
+        userId,
+        vehicleId: input.vehicleId,
+        plan: input.plan,
+        pricePerPeriod,
+        startDate,
+        nextBillingDate,
+      },
+      include: subscriptionInclude,
+    });
+
+    await tx.vehicle.update({
+      where: { id: input.vehicleId },
+      data: { status: VehicleStatus.RESERVED },
+    });
+
+    return created;
+  });
+
+  logger.info(`Subscription created: user ${userId}, vehicle ${vehicle.plate}, plan ${input.plan}`);
+
+  return toOutput(subscription);
 }
 
-export async function listCorporateAccounts(): Promise<CorporateAccountOutput[]> {
-  const accounts = await prisma.corporateAccount.findMany({
-    include: { _count: { select: { employees: true } } },
+export async function listMySubscriptions(userId: string): Promise<SubscriptionOutput[]> {
+  const subs = await prisma.subscription.findMany({
+    where: { userId },
+    include: subscriptionInclude,
     orderBy: { createdAt: 'desc' },
   });
 
-  return accounts.map(toAccountOutput);
+  return subs.map(toOutput);
 }
 
-export async function addEmployee(
-  accountId: string,
+export async function listSubscriptions(status?: SubscriptionStatus) {
+  const where: Prisma.SubscriptionWhereInput = status ? { status } : {};
+
+  const subs = await prisma.subscription.findMany({
+    where,
+    include: subscriptionInclude,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return subs.map(toOutput);
+}
+
+export async function pauseSubscription(
+  subscriptionId: string,
   userId: string
-): Promise<CorporateEmployeeOutput> {
-  const account = await prisma.corporateAccount.findUnique({ where: { id: accountId } });
-  if (!account) {
-    throw AppError.notFound('Corporate account not found.');
+): Promise<SubscriptionOutput> {
+  const sub = await prisma.subscription.findUnique({ where: { id: subscriptionId } });
+  if (!sub || sub.userId !== userId) {
+    throw AppError.notFound('Subscription not found.');
+  }
+  if (sub.status !== SubscriptionStatus.ACTIVE) {
+    throw AppError.badRequest('Only an active subscription can be paused.');
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    throw AppError.notFound('User not found.');
-  }
-
-  if (user.corporateAccountId) {
-    throw AppError.conflict('This user is already linked to a corporate account.');
-  }
-
-  const updated = await prisma.user.update({
-    where: { id: userId },
-    data: { corporateAccountId: accountId },
+  const updated = await prisma.subscription.update({
+    where: { id: subscriptionId },
+    data: { status: SubscriptionStatus.PAUSED },
+    include: subscriptionInclude,
   });
 
-  logger.info(`User ${userId} added as employee to corporate account ${account.companyName}`);
+  logger.info(`Subscription ${subscriptionId} paused.`);
 
-  return {
-    id: updated.id,
-    firstName: updated.firstName,
-    lastName: updated.lastName,
-    email: updated.email,
-    role: updated.role,
-  };
+  return toOutput(updated);
 }
 
-export async function removeEmployee(accountId: string, userId: string): Promise<void> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.corporateAccountId !== accountId) {
-    throw AppError.notFound('This user is not linked to this corporate account.');
+export async function resumeSubscription(
+  subscriptionId: string,
+  userId: string
+): Promise<SubscriptionOutput> {
+  const sub = await prisma.subscription.findUnique({ where: { id: subscriptionId } });
+  if (!sub || sub.userId !== userId) {
+    throw AppError.notFound('Subscription not found.');
+  }
+  if (sub.status !== SubscriptionStatus.PAUSED) {
+    throw AppError.badRequest('Only a paused subscription can be resumed.');
   }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { corporateAccountId: null },
+  const updated = await prisma.subscription.update({
+    where: { id: subscriptionId },
+    data: {
+      status: SubscriptionStatus.ACTIVE,
+      nextBillingDate: calculateNextBillingDate(new Date(), sub.plan),
+    },
+    include: subscriptionInclude,
   });
 
-  logger.info(`User ${userId} removed from corporate account ${accountId}`);
+  logger.info(`Subscription ${subscriptionId} resumed.`);
+
+  return toOutput(updated);
 }
 
-export async function listEmployees(accountId: string): Promise<CorporateEmployeeOutput[]> {
-  const account = await prisma.corporateAccount.findUnique({ where: { id: accountId } });
-  if (!account) {
-    throw AppError.notFound('Corporate account not found.');
+export async function cancelSubscription(
+  subscriptionId: string,
+  userId: string
+): Promise<SubscriptionOutput> {
+  const sub = await prisma.subscription.findUnique({ where: { id: subscriptionId } });
+  if (!sub || sub.userId !== userId) {
+    throw AppError.notFound('Subscription not found.');
+  }
+  if (sub.status === SubscriptionStatus.CANCELLED) {
+    throw AppError.badRequest('This subscription is already cancelled.');
   }
 
-  const employees = await prisma.user.findMany({
-    where: { corporateAccountId: accountId },
-    select: { id: true, firstName: true, lastName: true, email: true, role: true },
+  const updated = await prisma.$transaction(async (tx) => {
+    const cancelled = await tx.subscription.update({
+      where: { id: subscriptionId },
+      data: { status: SubscriptionStatus.CANCELLED },
+      include: subscriptionInclude,
+    });
+
+    await tx.vehicle.update({
+      where: { id: sub.vehicleId },
+      data: { status: VehicleStatus.AVAILABLE },
+    });
+
+    return cancelled;
   });
 
-  return employees;
+  logger.info(`Subscription ${subscriptionId} cancelled.`);
+
+  return toOutput(updated);
 }
 
 /**
- * Builds a consolidated billing summary across every employee of a
- * corporate account for a given date range - the real report a
- * company's finance team would use to reconcile a monthly invoice.
+ * Advances every active subscription whose billing date has passed
+ * to its next period. Intended to be called from a scheduled job
+ * (wired in during Phase 25's remaining steps) rather than on-demand.
  */
-export async function getBillingSummary(
-  accountId: string,
-  periodStart?: string,
-  periodEnd?: string
-): Promise<CorporateBillingSummary> {
-  const account = await prisma.corporateAccount.findUnique({ where: { id: accountId } });
-  if (!account) {
-    throw AppError.notFound('Corporate account not found.');
+export async function advanceDueBillingCycles(): Promise<number> {
+  const dueSubscriptions = await prisma.subscription.findMany({
+    where: { status: SubscriptionStatus.ACTIVE, nextBillingDate: { lte: new Date() } },
+  });
+
+  for (const sub of dueSubscriptions) {
+    await prisma.subscription.update({
+      where: { id: sub.id },
+      data: { nextBillingDate: calculateNextBillingDate(sub.nextBillingDate, sub.plan) },
+    });
   }
 
-  const start = periodStart
-    ? new Date(periodStart)
-    : new Date(new Date().setMonth(new Date().getMonth() - 1));
-  const end = periodEnd ? new Date(periodEnd) : new Date();
-
-  const employees = await prisma.user.findMany({
-    where: { corporateAccountId: accountId },
-    select: { id: true, firstName: true, lastName: true },
-  });
-
-  const employeeIds = employees.map((e) => e.id);
-
-  const bookings = await prisma.booking.findMany({
-    where: {
-      userId: { in: employeeIds },
-      createdAt: { gte: start, lte: end },
-      status: { in: ['CONFIRMED', 'ACTIVE', 'COMPLETED'] },
-    },
-    select: { userId: true, totalPrice: true },
-  });
-
-  const employeeBreakdown = employees.map((employee) => {
-    const employeeBookings = bookings.filter((b) => b.userId === employee.id);
-    return {
-      userId: employee.id,
-      userName: `${employee.firstName} ${employee.lastName}`,
-      bookingCount: employeeBookings.length,
-      totalSpend:
-        Math.round(employeeBookings.reduce((sum, b) => sum + b.totalPrice, 0) * 100) / 100,
-    };
-  });
-
-  return {
-    corporateAccountId: accountId,
-    companyName: account.companyName,
-    totalBookings: bookings.length,
-    totalSpend: Math.round(bookings.reduce((sum, b) => sum + b.totalPrice, 0) * 100) / 100,
-    periodStart: start,
-    periodEnd: end,
-    employeeBreakdown,
-  };
-}
-
-export async function deleteCorporateAccount(accountId: string): Promise<void> {
-  const existing = await prisma.corporateAccount.findUnique({
-    where: { id: accountId },
-    include: { _count: { select: { employees: true } } },
-  });
-
-  if (!existing) {
-    throw AppError.notFound('Corporate account not found.');
+  if (dueSubscriptions.length > 0) {
+    logger.info(`Advanced billing cycle for ${dueSubscriptions.length} subscription(s).`);
   }
 
-  if (existing._count.employees > 0) {
-    throw AppError.conflict(
-      'This corporate account still has linked employees. Remove them before deleting the account.'
-    );
-  }
-
-  await prisma.corporateAccount.delete({ where: { id: accountId } });
-  logger.info(`Corporate account deleted: ${existing.companyName}`);
+  return dueSubscriptions.length;
 }
