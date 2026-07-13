@@ -45,12 +45,19 @@ export async function getUserById(req: Request, res: Response): Promise<void> {
 }
 
 export async function adminUpdateUser(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw AppError.unauthorized('Authentication required.');
   const input = req.body as AdminUpdateUserInput;
-  const user = await usersService.adminUpdateUser(req.params.id, input);
+  const user = await usersService.adminUpdateUser(
+    req.params.id,
+    input,
+    req.user.userId,
+    req.user.role
+  );
   sendSuccess(res, 200, 'User updated.', user);
 }
 
 export async function adminDeleteUser(req: Request, res: Response): Promise<void> {
-  await usersService.adminDeleteUser(req.params.id);
+  if (!req.user) throw AppError.unauthorized('Authentication required.');
+  await usersService.adminDeleteUser(req.params.id, req.user.role);
   sendNoContent(res);
 }
