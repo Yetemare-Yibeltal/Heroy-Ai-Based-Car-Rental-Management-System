@@ -18,6 +18,7 @@ import { maintenanceRoutes } from '../modules/maintenance/maintenance.routes';
 import { corporateRoutes } from '../modules/corporate/corporate.routes';
 import { subscriptionRoutes } from '../modules/corporate/subscription.routes';
 import { complianceRoutes } from '../modules/compliance/compliance.routes';
+import { reportsRoutes } from '../modules/reports/reports.routes';
 
 export const routes = Router();
 
@@ -41,6 +42,7 @@ routes.use('/maintenance', maintenanceRoutes);
 routes.use('/corporate', corporateRoutes);
 routes.use('/subscriptions', subscriptionRoutes);
 routes.use('/compliance', complianceRoutes);
+routes.use('/reports', reportsRoutes);
 
 // Further module routes will be mounted here progressively, e.g.:
-// routes.use('/reports', reportsRoutes);
+// routes.use('/ai/pricing', aiPricingRoutes);
