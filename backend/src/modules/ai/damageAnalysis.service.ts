@@ -31,6 +31,22 @@ async function fetchImageAsBase64(url: string): Promise<{ data: string; mediaTyp
   return { data: base64, mediaType };
 }
 
+interface TextContentBlock {
+  type: 'text';
+  text: string;
+}
+
+interface ImageContentBlock {
+  type: 'image';
+  source: {
+    type: 'base64';
+    media_type: string;
+    data: string;
+  };
+}
+
+type ContentBlock = TextContentBlock | ImageContentBlock;
+
 /**
  * Uses Claude's vision capability to compare pickup and return
  * inspection photos for a booking and produce a real AI-generated
@@ -52,29 +68,36 @@ export async function analyzeDamageComparison(bookingId: string): Promise<Damage
     };
   }
 
-  const pickupImages = await Promise.all(comparison.pickup.photos.slice(0, 4).map(fetchImageAsBase64));
-  const returnImages = await Promise.all(comparison.return.photos.slice(0, 4).map(fetchImageAsBase64));
+  const pickupImages = await Promise.all(
+    comparison.pickup.photos.slice(0, 4).map(fetchImageAsBase64)
+  );
+  const returnImages = await Promise.all(
+    comparison.return.photos.slice(0, 4).map(fetchImageAsBase64)
+  );
 
-  const content: Array
-    | { type: 'text'; text: string }
-    | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
-  > = [{ type: 'text', text: 'Pickup photos:' }];
+  const content: ContentBlock[] = [{ type: 'text', text: 'Pickup photos:' }];
 
   for (const img of pickupImages) {
-    content.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } });
+    content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: img.mediaType, data: img.data },
+    });
   }
 
   content.push({ type: 'text', text: 'Return photos:' });
 
   for (const img of returnImages) {
-    content.push({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } });
+    content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: img.mediaType, data: img.data },
+    });
   }
 
   const response = await claude.messages.create({
     model: CLAUDE_MODEL,
     max_tokens: 400,
     system: DAMAGE_ANALYSIS_PROMPT,
-    messages: [{ role: 'user', content }],
+    messages: [{ role: 'user', content: content as never }],
   });
 
   const textBlock = response.content.find((block) => block.type === 'text');
