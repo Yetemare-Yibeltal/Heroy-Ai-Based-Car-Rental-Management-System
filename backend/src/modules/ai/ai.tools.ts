@@ -2,13 +2,15 @@ import { prisma } from '../../config/prisma';
 import { listVehicles } from '../vehicles/vehicles.service';
 import { getQuote } from '../bookings/bookings.service';
 import { AIToolDefinition } from './ai.types';
+import { pricingToolDefinition, suggestPriceAdjustment } from './pricing.tool';
+import { fraudCheckToolDefinition, checkBookingFraudRisk } from './fraudCheck.tool';
+import { voiceBookingToolDefinition, executeVoiceBooking } from './voiceBooking.flow';
 
 /**
  * Tool definitions passed to Claude on every request. Claude reads
  * these descriptions to decide, on its own, when a user's question
- * requires looking something up rather than answering from general
- * knowledge - e.g. "what SUVs do you have under $80/day" should
- * trigger search_vehicles rather than the model guessing an answer.
+ * requires looking something up or taking an action, rather than
+ * the model guessing an answer.
  */
 export const aiToolDefinitions: AIToolDefinition[] = [
   {
@@ -76,6 +78,9 @@ export const aiToolDefinitions: AIToolDefinition[] = [
       properties: {},
     },
   },
+  pricingToolDefinition,
+  fraudCheckToolDefinition,
+  voiceBookingToolDefinition,
 ];
 
 interface ToolExecutionContext {
@@ -147,6 +152,25 @@ export async function executeAiTool(
     case 'list_locations': {
       const locations = await prisma.location.findMany();
       return locations.map((l) => `${l.name} - ${l.address}, ${l.city}`).join('\n');
+    }
+
+    case 'suggest_price_adjustment': {
+      const result = await suggestPriceAdjustment(input.vehicleId as string);
+      return `${result.vehicleName}: current price $${result.currentPrice}/day, suggested price $${result.suggestedPrice}/day (${result.changePercent > 0 ? '+' : ''}${result.changePercent}%). Reasoning: ${result.reasoning}`;
+    }
+
+    case 'check_booking_fraud_risk': {
+      const result = await checkBookingFraudRisk(input.bookingId as string);
+      return `Fraud risk for booking ${result.bookingId}: ${result.riskLevel} (score: ${result.riskScore}/100). Signals: ${result.signals.join(' ')} Recommendation: ${result.recommendation}`;
+    }
+
+    case 'create_booking_from_conversation': {
+      return executeVoiceBooking(context.userId, {
+        vehicleId: input.vehicleId as string,
+        startDate: input.startDate as string,
+        endDate: input.endDate as string,
+        insuranceAddOn: input.insuranceAddOn as boolean | undefined,
+      });
     }
 
     default:
