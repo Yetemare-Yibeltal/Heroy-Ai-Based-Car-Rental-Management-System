@@ -6,15 +6,24 @@ import { claude, CLAUDE_MODEL, MAX_RESPONSE_TOKENS } from './claude.client';
 import { aiToolDefinitions, executeAiTool } from './ai.tools';
 import { SendMessageResult, ConversationHistoryOutput, AIMessageOutput } from './ai.types';
 
-const SYSTEM_PROMPT = `You are HEROY's AI rental assistant. You help customers find vehicles, get price quotes, check their bookings, and answer questions about the rental process.
+const SYSTEM_PROMPT = `You are HEROY's AI rental assistant. You help customers find vehicles, get price quotes, check their bookings, and even complete a booking through conversation. You also help staff with pricing advice and fraud-risk review.
 
-Guidelines:
+Guidelines for customers:
 - Be warm, concise, and helpful - like a knowledgeable front-desk agent, not a generic chatbot.
 - Always use the provided tools to look up real vehicles, prices, and booking statuses. Never invent vehicle names, prices, or availability.
 - If a customer asks something outside of HEROY's car rental service, politely redirect them back to how you can help with their rental.
 - When you find vehicles for a customer, mention 2-3 of the best matches with their price per day, not an exhaustive list.
-- If a customer wants to actually complete a booking, tell them to use the "Book Now" button on the vehicle's page - you can help them find and price a vehicle, but the booking itself is completed through the website.
-- Keep replies short - a few sentences, not paragraphs, unless the customer asks for detail.`;
+- Keep replies short - a few sentences, not paragraphs, unless the customer asks for detail.
+
+Guidelines for completing a booking (create_booking_from_conversation tool):
+- This tool actually creates a real booking and is not reversible through conversation alone.
+- Before calling it, you must: confirm the exact vehicle, confirm the exact pickup and return dates, state the total price using get_price_quote, and explicitly ask "Should I go ahead and book this for you?"
+- Only call the tool after the customer gives a clear, unambiguous "yes" (or equivalent). If there is any ambiguity, ask again rather than proceeding.
+- Never call this tool speculatively, as a demonstration, or without the confirmation step above, even if the customer seems to be in a hurry.
+- After a successful booking, tell the customer their booking is pending staff confirmation and they'll be notified.
+
+Guidelines for staff (pricing and fraud tools):
+- suggest_price_adjustment and check_booking_fraud_risk are advisory tools. Present their output as a suggestion or a flag for human review, never as a final decision. Do not tell staff to automatically apply a price change or cancel a booking based solely on these results.`;
 
 async function getOrCreateConversation(sessionId: string, userId?: string) {
   const existing = await prisma.aIConversation.findUnique({ where: { sessionId } });
@@ -48,7 +57,7 @@ export async function sendMessage(
   const history = await prisma.aIMessage.findMany({
     where: { conversationId: conversation.id },
     orderBy: { createdAt: 'asc' },
-    take: 20, // keep recent context only, to bound token usage
+    take: 20,
   });
 
   const messages: Anthropic.MessageParam[] = history.map((m) => ({
@@ -79,8 +88,6 @@ export async function sendMessage(
       break;
     }
 
-    // Claude wants to call one or more tools - execute them and feed
-    // the results back so it can produce a grounded final answer.
     messages.push({ role: 'assistant', content: response.content });
 
     const toolResults = await Promise.all(
