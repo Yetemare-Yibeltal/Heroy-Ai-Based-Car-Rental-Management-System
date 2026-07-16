@@ -14,15 +14,23 @@ export async function createBooking(req: Request, res: Response): Promise<void> 
 }
 
 export async function getQuote(req: Request, res: Response): Promise<void> {
-  const { vehicleId, startDate, endDate, insuranceAddOn, deliveryRequested, couponCode } =
-    req.query as {
-      vehicleId: string;
-      startDate: string;
-      endDate: string;
-      insuranceAddOn?: string;
-      deliveryRequested?: string;
-      couponCode?: string;
-    };
+  const {
+    vehicleId,
+    startDate,
+    endDate,
+    insuranceAddOn,
+    deliveryRequested,
+    couponCode,
+    locationId,
+  } = req.query as {
+    vehicleId: string;
+    startDate: string;
+    endDate: string;
+    insuranceAddOn?: string;
+    deliveryRequested?: string;
+    couponCode?: string;
+    locationId?: string;
+  };
 
   const quote = await bookingsService.getQuote(
     vehicleId,
@@ -30,7 +38,8 @@ export async function getQuote(req: Request, res: Response): Promise<void> {
     endDate,
     insuranceAddOn === 'true',
     deliveryRequested === 'true',
-    couponCode
+    couponCode,
+    locationId
   );
 
   sendSuccess(res, 200, 'Quote calculated.', quote);
@@ -43,10 +52,6 @@ export async function getBookingById(req: Request, res: Response): Promise<void>
   sendSuccess(res, 200, 'Booking fetched.', booking);
 }
 
-/**
- * Customers see only their own bookings; staff/admin see all
- * bookings and can filter by any user or vehicle.
- */
 export async function listBookings(req: Request, res: Response): Promise<void> {
   if (!req.user) throw AppError.unauthorized('Authentication required.');
 
