@@ -5,13 +5,8 @@ import { AIToolDefinition } from './ai.types';
 import { pricingToolDefinition, suggestPriceAdjustment } from './pricing.tool';
 import { fraudCheckToolDefinition, checkBookingFraudRisk } from './fraudCheck.tool';
 import { voiceBookingToolDefinition, executeVoiceBooking } from './voiceBooking.flow';
+import { escalateToHuman } from '../delivery/supportEscalation.service';
 
-/**
- * Tool definitions passed to Claude on every request. Claude reads
- * these descriptions to decide, on its own, when a user's question
- * requires looking something up or taking an action, rather than
- * the model guessing an answer.
- */
 export const aiToolDefinitions: AIToolDefinition[] = [
   {
     name: 'search_vehicles',
@@ -81,17 +76,33 @@ export const aiToolDefinitions: AIToolDefinition[] = [
   pricingToolDefinition,
   fraudCheckToolDefinition,
   voiceBookingToolDefinition,
+  {
+    name: 'escalate_to_human_support',
+    description:
+      'Escalates the conversation to a human support agent, who will follow up directly. Use this when the customer has a complaint, a billing dispute, a request outside what your other tools can handle, or after two attempts to help have not resolved their issue. Always tell the customer clearly that you are connecting them with a team member before calling this tool.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          enum: ['COMPLAINT', 'BILLING_DISPUTE', 'TECHNICAL_ISSUE', 'UNRESOLVED_BY_AI', 'OTHER'],
+          description: 'The category that best describes why this needs human attention.',
+        },
+        summary: {
+          type: 'string',
+          description: 'A brief summary of the issue for the staff member who picks this up.',
+        },
+      },
+      required: ['reason', 'summary'],
+    },
+  },
 ];
 
 interface ToolExecutionContext {
   userId?: string;
+  sessionId?: string;
 }
 
-/**
- * Executes a tool call by name and returns a plain-text result that
- * gets fed back to Claude as the tool's output. Every branch here
- * calls into real, existing services - never fabricated data.
- */
 export async function executeAiTool(
   toolName: string,
   input: Record<string, unknown>,
@@ -171,6 +182,21 @@ export async function executeAiTool(
         endDate: input.endDate as string,
         insuranceAddOn: input.insuranceAddOn as boolean | undefined,
       });
+    }
+
+    case 'escalate_to_human_support': {
+      if (!context.sessionId) {
+        return 'Could not escalate - no active session found.';
+      }
+
+      const escalation = await escalateToHuman(
+        context.sessionId,
+        input.reason as never,
+        input.summary as string,
+        context.userId
+      );
+
+      return `Escalated to human support. Reference: ${escalation.id}. Tell the customer a team member will follow up with them shortly, and that they can reference this ID: ${escalation.id}.`;
     }
 
     default:
