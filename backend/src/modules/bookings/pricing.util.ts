@@ -1,12 +1,10 @@
 import { Coupon, CouponType } from '@prisma/client';
 import { AppError } from '../../utils/AppError';
 import { calculateRentalDays } from './availability.util';
+import { calculateTax, resolveTaxRegion, TaxRegion } from '../localization/tax.service';
 import { PriceBreakdown } from './bookings.types';
 
-/** Flat daily cost of the optional insurance add-on. */
 const INSURANCE_COST_PER_DAY = 8;
-
-/** Flat one-time fee for requesting vehicle delivery instead of branch pickup. */
 const DELIVERY_FLAT_FEE = 15;
 
 interface PriceInputs {
@@ -16,12 +14,9 @@ interface PriceInputs {
   insuranceAddOn: boolean;
   deliveryRequested: boolean;
   coupon?: Coupon | null;
+  locationCountry?: string;
 }
 
-/**
- * Validates that a coupon is currently usable - active, not expired,
- * and under its max-use limit. Throws an AppError if not.
- */
 export function validateCoupon(coupon: Coupon): void {
   if (!coupon.active) {
     throw AppError.badRequest('This coupon is no longer active.');
@@ -38,15 +33,14 @@ function calculateDiscount(subtotal: number, coupon: Coupon): number {
   if (coupon.type === CouponType.PERCENTAGE) {
     return Math.round(subtotal * (coupon.value / 100) * 100) / 100;
   }
-  // FIXED discount, capped so it can never make the total negative.
   return Math.min(coupon.value, subtotal);
 }
 
 /**
- * Computes the full price breakdown for a booking. This is the
- * single function both the booking creation flow and any "get me a
- * quote" endpoint should call, so the customer always sees the same
- * number they'll actually be charged.
+ * Computes the full price breakdown for a booking, now including a
+ * real tax line item. Region defaults to Ethiopia (ET) - HEROY's
+ * home market - when no location country is provided, rather than
+ * silently skipping tax.
  */
 export function calculatePriceBreakdown(inputs: PriceInputs): PriceBreakdown {
   const days = calculateRentalDays(inputs.startDate, inputs.endDate);
@@ -61,7 +55,12 @@ export function calculatePriceBreakdown(inputs: PriceInputs): PriceBreakdown {
     discount = calculateDiscount(subtotal, inputs.coupon);
   }
 
-  const total = Math.max(subtotal + insuranceCost + deliveryCost - discount, 0);
+  const preTaxTotal = Math.max(subtotal + insuranceCost + deliveryCost - discount, 0);
+
+  const region: TaxRegion = inputs.locationCountry
+    ? resolveTaxRegion(inputs.locationCountry)
+    : 'ET';
+  const taxResult = calculateTax(preTaxTotal, region);
 
   return {
     days,
@@ -70,6 +69,6 @@ export function calculatePriceBreakdown(inputs: PriceInputs): PriceBreakdown {
     insuranceCost,
     deliveryCost,
     discount,
-    total: Math.round(total * 100) / 100,
+    total: taxResult.totalWithTax,
   };
 }
