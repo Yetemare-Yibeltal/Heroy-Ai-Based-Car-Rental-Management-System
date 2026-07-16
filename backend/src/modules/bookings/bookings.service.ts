@@ -100,6 +100,12 @@ export async function createBooking(
     }
   }
 
+  let locationCountry: string | undefined;
+  if (input.locationId) {
+    const location = await prisma.location.findUnique({ where: { id: input.locationId } });
+    locationCountry = location?.country;
+  }
+
   const breakdown = calculatePriceBreakdown({
     pricePerDay: vehicle.pricePerDay,
     startDate,
@@ -107,6 +113,7 @@ export async function createBooking(
     insuranceAddOn: input.insuranceAddOn ?? false,
     deliveryRequested: input.deliveryRequested ?? false,
     coupon,
+    locationCountry,
   });
 
   const booking = await prisma.$transaction(async (tx) => {
@@ -289,7 +296,8 @@ export async function getQuote(
   endDate: string,
   insuranceAddOn: boolean,
   deliveryRequested: boolean,
-  couponCode?: string
+  couponCode?: string,
+  locationId?: string
 ) {
   const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
   if (!vehicle) {
@@ -304,6 +312,12 @@ export async function getQuote(
     }
   }
 
+  let locationCountry: string | undefined;
+  if (locationId) {
+    const location = await prisma.location.findUnique({ where: { id: locationId } });
+    locationCountry = location?.country;
+  }
+
   return calculatePriceBreakdown({
     pricePerDay: vehicle.pricePerDay,
     startDate: new Date(startDate),
@@ -311,5 +325,6 @@ export async function getQuote(
     insuranceAddOn,
     deliveryRequested,
     coupon,
+    locationCountry,
   });
 }
