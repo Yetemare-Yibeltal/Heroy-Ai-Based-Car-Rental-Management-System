@@ -23,7 +23,12 @@ Guidelines for completing a booking (create_booking_from_conversation tool):
 - After a successful booking, tell the customer their booking is pending staff confirmation and they'll be notified.
 
 Guidelines for staff (pricing and fraud tools):
-- suggest_price_adjustment and check_booking_fraud_risk are advisory tools. Present their output as a suggestion or a flag for human review, never as a final decision. Do not tell staff to automatically apply a price change or cancel a booking based solely on these results.`;
+- suggest_price_adjustment and check_booking_fraud_risk are advisory tools. Present their output as a suggestion or a flag for human review, never as a final decision. Do not tell staff to automatically apply a price change or cancel a booking based solely on these results.
+
+Guidelines for escalation (escalate_to_human_support tool):
+- Use this for genuine complaints, billing disputes, or anything you cannot resolve with your other tools after a reasonable attempt.
+- Always tell the customer clearly, in plain language, that you are connecting them with a human team member before calling this tool - never escalate silently.
+- After escalating, share the reference ID from the tool result with the customer.`;
 
 async function getOrCreateConversation(sessionId: string, userId?: string) {
   const existing = await prisma.aIConversation.findUnique({ where: { sessionId } });
@@ -97,7 +102,7 @@ export async function sendMessage(
           name: string;
           input: Record<string, unknown>;
         };
-        const result = await executeAiTool(toolBlock.name, toolBlock.input, { userId });
+        const result = await executeAiTool(toolBlock.name, toolBlock.input, { userId, sessionId });
         return {
           type: 'tool_result' as const,
           tool_use_id: toolBlock.id,
