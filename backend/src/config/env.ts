@@ -42,6 +42,10 @@ const envSchema = z.object({
 
   SENTRY_DSN: z.string().optional(),
 
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_CONTACT_EMAIL: z.string().optional(),
+
   RATE_LIMIT_WINDOW_MS: z.string().default('900000'),
   RATE_LIMIT_MAX_REQUESTS: z.string().default('100'),
 });
@@ -111,6 +115,12 @@ export const env = {
   },
 
   sentryDsn: raw.SENTRY_DSN,
+
+  vapid: {
+    publicKey: raw.VAPID_PUBLIC_KEY,
+    privateKey: raw.VAPID_PRIVATE_KEY,
+    contactEmail: raw.VAPID_CONTACT_EMAIL,
+  },
 
   rateLimit: {
     windowMs: parseInt(raw.RATE_LIMIT_WINDOW_MS, 10),
