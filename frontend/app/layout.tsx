@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { AssistantWidget } from '@/components/ai/AssistantWidget';
 import { CookieConsent } from '@/components/legal/CookieConsent';
+import { SkipToContent } from '@/components/layout/SkipToContent';
 
 const fontDisplay = Oswald({
   subsets: ['latin'],
@@ -49,8 +50,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${fontDisplay.variable} ${fontBody.variable} ${fontMono.variable}`}>
       <body className="font-body antialiased">
         <Providers>
+          <SkipToContent />
           <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <main id="main-content" className="min-h-screen">{children}</main>
           <Footer />
           <AssistantWidget />
           <CookieConsent />
