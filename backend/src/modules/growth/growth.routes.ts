@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as growthController from './growth.controller';
-import { authenticate } from '../../middleware/auth';
+import { authenticate, optionalAuthenticate } from '../../middleware/auth';
 import { catchAsync } from '../../utils/catchAsync';
 
 export const growthRoutes = Router();
@@ -24,4 +24,10 @@ growthRoutes.get('/newsletter/confirm', catchAsync(growthController.confirmNewsl
 growthRoutes.post(
   '/newsletter/unsubscribe',
   catchAsync(growthController.unsubscribeFromNewsletter)
+);
+
+growthRoutes.post(
+  '/analytics/track',
+  optionalAuthenticate,
+  catchAsync(growthController.trackAnalyticsEvent)
 );
