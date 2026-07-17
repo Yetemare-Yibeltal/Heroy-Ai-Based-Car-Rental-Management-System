@@ -4,6 +4,7 @@ import { AppError } from '../../utils/AppError';
 import * as referralService from './referral.service';
 import * as pushService from './pushNotifications.service';
 import * as newsletterService from './newsletter.service';
+import { trackEvent, AnalyticsEventName } from '../../integrations/analytics';
 
 export async function getMyReferralStats(req: Request, res: Response): Promise<void> {
   if (!req.user) throw AppError.unauthorized('Authentication required.');
@@ -48,4 +49,14 @@ export async function unsubscribeFromNewsletter(req: Request, res: Response): Pr
   const { email } = req.body as { email: string };
   newsletterService.unsubscribeFromNewsletter(email);
   sendNoContent(res);
+}
+
+export async function trackAnalyticsEvent(req: Request, res: Response): Promise<void> {
+  const { eventName, metadata } = req.body as {
+    eventName: AnalyticsEventName;
+    metadata?: Record<string, unknown>;
+  };
+
+  await trackEvent(eventName, req.user?.userId, metadata);
+  sendSuccess(res, 200, 'Event tracked.', null);
 }
