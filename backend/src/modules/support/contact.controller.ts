@@ -15,9 +15,7 @@ export async function submitContactForm(req: Request, res: Response): Promise<vo
   const { name, email, subject, message } = req.body as ContactFormInput;
 
   if (!env.email.smtpHost) {
-    logger.info(
-      `[CONTACT FORM - not emailed, SMTP not configured] From: ${name} <${email}> | ${subject}: ${message}`
-    );
+    logger.info(`[CONTACT FORM - not emailed, SMTP not configured] From: ${name} <${email}> | ${subject}: ${message}`);
     sendSuccess(res, 200, 'Your message has been received. We will get back to you shortly.', null);
     return;
   }
@@ -27,9 +25,7 @@ export async function submitContactForm(req: Request, res: Response): Promise<vo
       host: env.email.smtpHost,
       port: env.email.smtpPort ?? 587,
       secure: env.email.smtpPort === 465,
-      auth: env.email.smtpUser
-        ? { user: env.email.smtpUser, pass: env.email.smtpPassword }
-        : undefined,
+      auth: env.email.smtpUser ? { user: env.email.smtpUser, pass: env.email.smtpPassword } : undefined,
     });
 
     await transporter.sendMail({
