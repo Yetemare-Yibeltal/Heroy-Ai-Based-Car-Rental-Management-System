@@ -21,6 +21,7 @@ import { complianceRoutes } from '../modules/compliance/compliance.routes';
 import { reportsRoutes } from '../modules/reports/reports.routes';
 import { growthRoutes } from '../modules/growth/growth.routes';
 import { partnerRoutes } from '../modules/partner/partner.routes';
+import { contactRoutes } from '../modules/support/contact.routes';
 
 export const routes = Router();
 
@@ -47,6 +48,4 @@ routes.use('/compliance', complianceRoutes);
 routes.use('/reports', reportsRoutes);
 routes.use('/growth', growthRoutes);
 routes.use('/partner', partnerRoutes);
-
-// Further module routes will be mounted here progressively, e.g.:
-// routes.use('/accessibility', accessibilityRoutes);
+routes.use('/contact', contactRoutes);
