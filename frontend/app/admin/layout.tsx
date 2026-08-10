@@ -30,18 +30,18 @@ const NAV_SECTIONS: {
   icon: typeof LayoutDashboard;
   adminOnly?: boolean;
 }[] = [
-  { href: '/admin', label: 'Overview', icon: LayoutDashboard },
-  { href: '/admin/fleet', label: 'Fleet', icon: Car },
-  { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/payments', label: 'Payments', icon: CreditCard, adminOnly: true },
-  { href: '/admin/reviews', label: 'Reviews', icon: Star },
-  { href: '/admin/coupons', label: 'Coupons', icon: Tag, adminOnly: true },
-  { href: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
-  { href: '/admin/verifications', label: 'Verifications', icon: ShieldCheck },
-  { href: '/admin/team', label: 'Team', icon: UserCog, adminOnly: true },
-  { href: '/admin/reports', label: 'Reports', icon: BarChart3, adminOnly: true },
-];
+    { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+    { href: '/admin/fleet', label: 'Fleet', icon: Car },
+    { href: '/admin/bookings', label: 'Bookings', icon: Calendar },
+    { href: '/admin/users', label: 'Users', icon: Users },
+    { href: '/admin/payments', label: 'Payments', icon: CreditCard, adminOnly: true },
+    { href: '/admin/reviews', label: 'Reviews', icon: Star },
+    { href: '/admin/coupons', label: 'Coupons', icon: Tag, adminOnly: true },
+    { href: '/admin/maintenance', label: 'Maintenance', icon: Wrench },
+    { href: '/admin/verifications', label: 'Verifications', icon: ShieldCheck },
+    { href: '/admin/team', label: 'Team', icon: UserCog, adminOnly: true },
+    { href: '/admin/reports', label: 'Reports', icon: BarChart3, adminOnly: true },
+  ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isInitialized } = useAuthStore();
