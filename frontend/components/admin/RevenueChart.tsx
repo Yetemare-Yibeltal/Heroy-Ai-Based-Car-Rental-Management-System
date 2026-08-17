@@ -68,8 +68,7 @@ export function RevenueChart() {
                 formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
               />
               <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+            
         </div>
       )}
     </GlassPanel>
